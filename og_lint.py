@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """og-lint: check Open Graph / Twitter card tags in HTML files or a live URL. Markup only; stdlib only."""
-import sys, re, glob, argparse, urllib.request
+import sys, re, glob, argparse, urllib.request, urllib.parse
 from html.parser import HTMLParser
 class P(HTMLParser):
     def __init__(s): super().__init__(); s.meta={}; s.title=False
@@ -19,7 +19,10 @@ def lint(html, where):
     if img.startswith("http://"): issues.append("og:image uses http://; some crawlers refuse mixed content")
     if not m.get("twitter:card"): issues.append("missing twitter:card (X falls back to a small card or none)")
     if img and not (m.get("og:image:width") and m.get("og:image:height")): issues.append("no og:image:width/height (first share on LinkedIn/Facebook may render without image)")
+    site=where if where.startswith("http") else (m.get("og:url") if re.match(r"https?://",m.get("og:url","")) else None)
+    if issues and site: SITES.append(site)
     return [f"{where}: {i}" for i in issues]
+SITES=[]
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("targets",nargs="+",help="HTML globs or https URLs"); ap.add_argument("--warn-only",action="store_true")
     a=ap.parse_args(); out=[]
@@ -32,7 +35,8 @@ def main():
     for o in out: print("::warning::"+o if a.warn_only else "::error::"+o)
     if out:
         print(f"\n{len(out)} share-card issue(s). This checks markup only; crawlers can still be blocked by your host/WAF.")
-        print("To see what each real crawler gets back from your live page (free check, paid fix pack optional): https://sharepack.adjudi.com/?utm_source=github&utm_medium=action&utm_campaign=sharepack-intent-w2&utm_content=og-lint-action")
+        q=("url="+urllib.parse.quote(SITES[0],safe="")+"&") if SITES else ""
+        print(f"To see what each real crawler gets back from your live page (free check, paid fix pack optional): https://sharepack.adjudi.com/?{q}utm_source=github&utm_medium=action&utm_campaign=sharepack-intent-w2&utm_content=og-lint-action")
     else: print("og-lint: no markup issues found.")
     sys.exit(1 if out and not a.warn_only else 0)
 if __name__=="__main__": main()

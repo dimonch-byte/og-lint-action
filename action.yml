@@ -1,0 +1,11 @@
+name: "og-lint share cards"
+description: "Fail a PR when built HTML is missing og:image, uses a relative og:image, or has no twitter:card. Markup only, stdlib Python."
+branding: {icon: "image", color: "blue"}
+inputs:
+  targets: {description: "Space-separated HTML globs (e.g. 'dist/**/*.html') or https URLs", required: true}
+  warn-only: {description: "Report as warnings instead of failing", required: false, default: "false"}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: python3 "${{ github.action_path }}/og_lint.py" ${{ inputs.targets }} $([ "${{ inputs.warn-only }}" = "true" ] && echo --warn-only)
